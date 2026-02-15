@@ -1,0 +1,359 @@
+Hi I have to create a Data Labelling or Annotation web application which will be for enterprise and would be scalable using fast api and react and other related techstack.
+
+Refer; C:\Users\abhisha3\Desktop\Projects\Perosnal\Data Annotation\PRD Docs
+
+Complete code of Label Studio; C:\Users\abhisha3\Desktop\Projects\Perosnal\Label Studio
+PRD Document by the client; C:\Users\abhisha3\Desktop\Projects\Perosnal\Data Annotation\PRD Docs\Data_Annotation_Platform_PRD_Addendum_v2.0 - Copy.pdf
+Rough Proposal created by Us;
+And Below detailed prompt created by me manually which should be prioritised in case of conflict.
+Open Questions;C:\Users\abhisha3\Desktop\Projects\Perosnal\Data Annotation\PRD Docs\Questions.docx
+Previous chat context
+
+File Structuure; 
+
+Follow microservice approach so that we can easily scale and add AI or LLM thing later.
+Current version dont need any implementation of AI,LLM,RAG etc
+Maintain below .md file or ppt ;
+	Readme
+	All prompt
+	file structure description
+	business implimentation
+	New Proposal ppt
+	Architecture based on prd and current project implementation
+	one ppt showing figma like ui that we are going to build here.
+Make required bat file now like;
+	firsttimesetup
+	startserver including backend and frontend
+	create desktop icon which will launh project with all server running
+
+
+Application;
+	should follow dark theme klike netflix or n8n website
+	should be having nice professional simulation effect whereever applicable.
+	proper header and footer like application not website
+	keep simple login approach now or implement full fledge login method using company id and create few login for admin and super admin with name abhi and share with me to login.
+
+
+Home Page ;
+
+	Shoulld 
+	
+
+
+
+
+
+New Project:
+New Annotator Profile Create
+New Reviewer profile Creation
+Workqueue: Operation manager,Primary Annotator,Reviewer, Secondary  Annotator
+
+>Basic Form: Workspace, Project Name: ID :Description : Pipeline Template (Kuch skip rhega , kuch nhi)
+
+>
+Data Import:Drag and Upload: Bulk Image, Bulk Video, Bulk text file,Bulk xml,Bulk json, Bulk Audio , Bulk HTML ,
+
+Another option for pasting text which will be coverted into text file
+Data Insight once upload completed
+
+Configure Annotion attributes for input
+
+Assignment > Annotator,Reviewer
+
+Send for Annotation
+
+
+
+1.Start
+2.Configure Project
+Dataset
+3.Assign Annotator
+4.
+
+
+
+
+User:
+
+Super Admin
+Admin
+
+Operation manager>
+	Assignment
+	Create 
+	Assignment Configure :Date for Annotation,Review
+	Task Create
+	pipeline
+	progress
+	Re-assign
+	Request Raised for Clarification
+	Request Raised for Re-Assignment 
+	Result>bulk Export
+	Insight
+	
+Annotator
+	Profile
+	Will see his assignment
+	Or can pick from unassigned Queue
+	Annotation Task >
+	Previous Work> Feedback:Insight:Rework if open by admin allow> Proper filter
+	Response Received from Reviewer/QA> Can work here 
+	Submit work for Review
+	Save partial work without review
+	Auto Save in 1 min
+	Skip for later Review
+	Skip for Clarification from Operation Manager
+	Create Request to Re-assign> Will pass through Operation Manager approval
+	
+	
+Reviewer:
+	Will Review work by filtering in any way:By default FIFO
+	  > Approved, Reject-Will be moved back to Annotator or Secondary Annotator 
+	  >Skip for later
+	  >Submit Project for Operation manager
+		Insight
+		Profile
+		Assignment
+
+	  
+
+	  
+	
+	
+	
+
+
+
+
+
+
+
+Tab:
+
+Home should have atleast below things in a most efficient way aligned in nice format and look professional:Also you can add more as per your efficiency alinged with use case.
+
+
+1.Create Project
+2.Invite member
+3.Member performance
+4.Recent Project with Progress bar
+5.Analytics:
+6.Organisation:
+7.API:
+8.DOC:
+9.Support:
+10.User Profile
+11. Search Bar
+
+
+
+
+
+
+For Every Project I want to make a orchestration like flow having circular node.Refer attached image for this.
+Circular Node representing single activity;
+
+Normal solid filled circular node; Activity executed
+Normal empty double line circule node would represent activity skipped like not needed kind of stuff whenever we dont want few task to execute here
+Start Node and End Node would just set the project data, will change all stus of activity project in DB.basically this will perform all database oiperation and other configuration like notification, queue movement, email etc
+Double Donut Node would represent group of node categorised under subnode like clicking on this may open three more node. Or second scenario it may be linked to other clild project being mapped to primary or parent project.like Project can have multiple Annotator so we can have several child flow defined for each annotator and then similar node to mark their progress.
+
+One node with man sitting inside it show activity which will need manual input.like here once child project created ,it will open a manual GT which is activity with man inside it  so it will be in progress satus and annnotator will submit it once all annotation done from their side and then it will be marked completed.
+We woulld foolow some color convention for all states here. like completed one light green, progress one silver etc.
+
+
+we would have one table for each activty or node having unique specid showing unique node and one random generated unique id assigned to that project instance, start date, end date, last modified date,status,owner,type,eta,max eta,
+
+
+We have to make multiple postgres table to store everything and we should have proper id,date attributes,joins,foreign key to related everything.
+
+tabels can be like ;
+Project table
+activity table
+task table
+Reference table; storing statiuc data for task and activity like its uniquee id, name ,api endpoint,description
+projects can have multiple profile like parent project,annotator project,review project, reassignment project etc
+Each should be linked as per the business need.
+
+I have added multiple reference image giving meaning ful name as well under C:\Users\abhisha3\Desktop\Projects\Perosnal\Data Annotation\PRD Docs
+
+take reference and make the project in details. Work nicely with database .This should running from here only without installing external database application.As this is tghe prototype version,
+Also every node should have api behind it which accept request from previous or admin panel and then do some operation and updates in db and send the request to next node.
+Make proper schema for all table .
+
+Resource:
+==========
+
+
+
+Project:
+==========
+
+
+Project name
+Description
+Task
+Progress
+Created By
+Created At
+Action Button> 
+	Duplicate Project>Project name,Project Description,Destination Workspace
+
+
+
+
+
+Analytics:
+==========
+Should have proper analytics 
+
+task tab;
+Should show list of all task and then proper filter tab in sidebar to check specific use case
+
+Project tab;
+
+Showing all project with all filters at roa and column level.
+like one workspace number would show all project inside it.from parent project we can navigate to child by hierachy things which will list all child project and on clicking it will open that project.
+
+
+Organisation:
+==========
+
+
+API:
+==========
+
+
+DOC:
+==========
+
+Support:
+==========
+
+
+Profile
+==========
+
+Search:
+==========
+
+
+Resource:
+==========
+
+
+
+New Project:
+New Annotator Profile Create
+New Reviewer profile Creation
+Workqueue: Operation manager,Primary Annotator,Reviewer, Secondary  Annotator
+
+>Basic Form: Workspace, Project Name: ID :Description : Pipeline Template (Kuch skip rhega , kuch nhi)
+
+>
+Data Import:Drag and Upload: Bulk Image, Bulk Video, Bulk text file,Bulk xml,Bulk json, Bulk Audio , Bulk HTML ,
+
+Another option for pasting text which will be coverted into text file
+Data Insight once upload completed
+
+Configure Annotion attributes for input
+
+Assignment > Annotator,Reviewer
+
+Send for Annotation
+
+
+
+1.Start
+2.Configure Project
+Dataset
+3.Assign Annotator
+4.
+
+
+
+
+User:
+
+1.Super Admin.All as Operation manager for now 
+2. Admin ; All as Operation manager for now 
+
+3.Operation manager>
+	Assignment
+	Create 
+	Assignment Configure :Date for Annotation,Review
+	Task Create
+	pipeline
+	progress
+	Re-assign
+	Request Raised for Clarification
+	Request Raised for Re-Assignment 
+	Result>bulk Export
+	Insight
+	
+4.Annotator
+	Profile
+	Will see his assignment
+	Or can pick from unassigned Queue
+	Annotation Task >
+	Previous Work> Feedback:Insight:Rework if open by admin allow> Proper filter
+	Response Received from Reviewer/QA> Can work here 
+	Submit work for Review
+	Save partial work without review
+	Auto Save in 1 min
+	Skip for later Review
+	Skip for Clarification from Operation Manager
+	Create Request to Re-assign> Will pass through Operation Manager approval
+	
+	
+5.Reviewer:
+	Will Review work by filtering in any way:By default FIFO
+	  > Approved, Reject-Will be moved back to Annotator or Secondary Annotator 
+	  >Skip for later
+	  >Submit Project for Operation manager
+		Insight
+		Profile
+		Assignment
+
+	  
+
+	  
+	
+	
+	
+
+
+
+
+
+
+
+Tab:
+
+Home:
+==========
+
+
+Create Project
+Auto label with prompt
+Invite member
+Member performance
+
+
+Recent Project with Progress bar
+
+Project:
+==========
+
+
+Project name
+Description
+Task
+Progress
+Created By
+Created At
+Action Button> 
+	Duplicate Project>Project name,Project Description,Destination Workspace
+
+
+Create project under  C:\Users\abhisha3\Desktop\Projects\Perosnal\Data Annotation\Annotation Studio V1
