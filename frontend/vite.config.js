@@ -15,6 +15,8 @@ export default defineConfig({
       '/tasks': 'http://127.0.0.1:8000',
       '/insight': 'http://127.0.0.1:8000',
       '/queue': 'http://127.0.0.1:8000',
+      '/requests': 'http://127.0.0.1:8000',
+      '/db': 'http://127.0.0.1:8000',
       '/docs': 'http://127.0.0.1:8000',
       '/openapi.json': 'http://127.0.0.1:8000',
     },

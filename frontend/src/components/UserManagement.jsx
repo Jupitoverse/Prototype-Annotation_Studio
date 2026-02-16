@@ -37,7 +37,9 @@ export function UserManagement() {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
-  const [filters, setFilters] = useState({ role: '', name_contains: '' })
+  const [filters, setFilters] = useState({ role: '', name_contains: '', email_contains: '', mobile_contains: '', availability: '' })
+  const [sortBy, setSortBy] = useState('id')
+  const [sortDir, setSortDir] = useState('asc')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -220,17 +222,75 @@ export function UserManagement() {
     URL.revokeObjectURL(url)
   }
 
-  const clearFilters = () => setFilters({ role: '', name_contains: '' })
-  const hasFilters = filters.role || filters.name_contains
-  const filteredUsers = filters.name_contains
-    ? users.filter(
-        (u) =>
-          (u.first_name || '').toLowerCase().includes(filters.name_contains.toLowerCase()) ||
-          (u.last_name || '').toLowerCase().includes(filters.name_contains.toLowerCase()) ||
-          (u.email || '').toLowerCase().includes(filters.name_contains.toLowerCase()) ||
-          (u.external_id || '').toLowerCase().includes(filters.name_contains.toLowerCase())
-      )
-    : users
+  const clearFilters = () => setFilters({ role: '', name_contains: '', email_contains: '', mobile_contains: '', availability: '' })
+  const hasFilters = filters.role || filters.name_contains || filters.email_contains || filters.mobile_contains || filters.availability
+
+  let filteredUsers = users
+  if (filters.role) filteredUsers = filteredUsers.filter((u) => u.role === filters.role)
+  if (filters.name_contains) {
+    const q = filters.name_contains.toLowerCase()
+    filteredUsers = filteredUsers.filter(
+      (u) =>
+        (u.first_name || '').toLowerCase().includes(q) ||
+        (u.last_name || '').toLowerCase().includes(q) ||
+        (u.full_name || '').toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q) ||
+        (u.userid || '').toLowerCase().includes(q) ||
+        (u.external_id || '').toLowerCase().includes(q)
+    )
+  }
+  if (filters.email_contains) {
+    const q = filters.email_contains.toLowerCase()
+    filteredUsers = filteredUsers.filter((u) => (u.email || '').toLowerCase().includes(q))
+  }
+  if (filters.mobile_contains) {
+    const q = filters.mobile_contains.toLowerCase()
+    filteredUsers = filteredUsers.filter((u) => (u.mobile || '').toLowerCase().includes(q))
+  }
+  if (filters.availability) filteredUsers = filteredUsers.filter((u) => (u.availability || '') === filters.availability)
+
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    let va = a[sortBy] ?? a.id ?? ''
+    let vb = b[sortBy] ?? b.id ?? ''
+    if (typeof va === 'number' && typeof vb === 'number') return sortDir === 'asc' ? va - vb : vb - va
+    va = String(va).toLowerCase()
+    vb = String(vb).toLowerCase()
+    if (sortDir === 'asc') return va.localeCompare(vb)
+    return vb.localeCompare(va)
+  })
+
+  const handleSort = (col) => {
+    if (sortBy === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else setSortBy(col)
+  }
+
+  const downloadCsv = () => {
+    const headers = ['User ID', 'First name', 'Last name', 'Email', 'Mobile', 'Role', 'Availability', 'Max load']
+    const rows = sortedUsers.map((u) => [
+      u.userid || u.external_id || u.id,
+      u.first_name ?? '',
+      u.last_name ?? '',
+      u.email ?? '',
+      u.mobile ?? '',
+      u.role ?? '',
+      u.availability ?? '',
+      u.max_load ?? '',
+    ])
+    const csv = [headers.join(','), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `users-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const sendEmailToUsers = () => {
+    const emails = sortedUsers.map((u) => u.email).filter(Boolean)
+    if (emails.length === 0) return
+    window.location.href = `mailto:${emails.join(',')}?subject=Annotation%20Studio`
+  }
 
   return (
     <div className="list-page">
@@ -260,18 +320,58 @@ export function UserManagement() {
           >
             <option value="">All roles</option>
             {(roles.length ? roles : Object.entries(ROLE_LABELS).map(([id, label]) => ({ id, label }))).map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.label}
-              </option>
+              <option key={r.id} value={r.id}>{r.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-section">
+          <label>Email contains</label>
+          <input
+            type="text"
+            placeholder="Filter by email…"
+            value={filters.email_contains}
+            onChange={(e) => setFilters((f) => ({ ...f, email_contains: e.target.value }))}
+          />
+        </div>
+        <div className="filter-section">
+          <label>Mobile contains</label>
+          <input
+            type="text"
+            placeholder="Filter by mobile…"
+            value={filters.mobile_contains}
+            onChange={(e) => setFilters((f) => ({ ...f, mobile_contains: e.target.value }))}
+          />
+        </div>
+        <div className="filter-section">
+          <label>Availability</label>
+          <select
+            value={filters.availability}
+            onChange={(e) => setFilters((f) => ({ ...f, availability: e.target.value }))}
+          >
+            <option value="">All</option>
+            {AVAILABILITY_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
         </div>
       </aside>
 
       <div className="list-content">
-        <div className="list-header">
-          <h1 className="list-title">User list</h1>
-          <span className="list-results">{filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''}</span>
+        <div className="list-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <h1 className="list-title">User list</h1>
+            <span className="list-results">{sortedUsers.length} user{sortedUsers.length !== 1 ? 's' : ''}</span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={openCreate}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+            title="Add new user"
+          >
+            <span aria-hidden style={{ fontSize: '1.25rem', lineHeight: 1 }}>+</span>
+            Add user
+          </button>
         </div>
 
         {successMessage && (
@@ -287,11 +387,14 @@ export function UserManagement() {
         )}
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-          <button type="button" className="btn btn-primary" onClick={openCreate}>
-            Create user
+          <button type="button" className="btn btn-secondary" onClick={downloadCsv} disabled={sortedUsers.length === 0}>
+            Download CSV
           </button>
           <button type="button" className="btn btn-secondary" onClick={exportAllUsers} disabled={users.length === 0}>
-            Export all users (JSON)
+            Download JSON
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={sendEmailToUsers} disabled={sortedUsers.length === 0} title="Opens mail client with selected users' emails">
+            Send email
           </button>
           <button
             type="button"
@@ -321,28 +424,28 @@ export function UserManagement() {
             <table className="list-table">
               <thead>
                 <tr>
-                  <th>User ID</th>
-                  <th>First name</th>
+                  <th><button type="button" className="link table-sort" onClick={() => handleSort('userid')}>User ID {sortBy === 'userid' && (sortDir === 'asc' ? '↑' : '↓')}</button></th>
+                  <th><button type="button" className="link table-sort" onClick={() => handleSort('first_name')}>First name {sortBy === 'first_name' && (sortDir === 'asc' ? '↑' : '↓')}</button></th>
                   <th>Middle name</th>
-                  <th>Last name</th>
-                  <th>Email</th>
-                  <th>Mobile</th>
-                  <th>Role</th>
-                  <th>Availability</th>
-                  <th>Max load</th>
+                  <th><button type="button" className="link table-sort" onClick={() => handleSort('last_name')}>Last name {sortBy === 'last_name' && (sortDir === 'asc' ? '↑' : '↓')}</button></th>
+                  <th><button type="button" className="link table-sort" onClick={() => handleSort('email')}>Email {sortBy === 'email' && (sortDir === 'asc' ? '↑' : '↓')}</button></th>
+                  <th><button type="button" className="link table-sort" onClick={() => handleSort('mobile')}>Mobile {sortBy === 'mobile' && (sortDir === 'asc' ? '↑' : '↓')}</button></th>
+                  <th><button type="button" className="link table-sort" onClick={() => handleSort('role')}>Role {sortBy === 'role' && (sortDir === 'asc' ? '↑' : '↓')}</button></th>
+                  <th><button type="button" className="link table-sort" onClick={() => handleSort('availability')}>Availability {sortBy === 'availability' && (sortDir === 'asc' ? '↑' : '↓')}</button></th>
+                  <th><button type="button" className="link table-sort" onClick={() => handleSort('max_load')}>Max load {sortBy === 'max_load' && (sortDir === 'asc' ? '↑' : '↓')}</button></th>
                   <th>Workspace access</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.length === 0 ? (
+                {sortedUsers.length === 0 ? (
                   <tr>
                     <td colSpan={11} className="list-empty-cell">
-                      No users found. Demo logins (seed): admin@annotationstudio.com / admin123, annotator@annotationstudio.com / demo, reviewer@annotationstudio.com / demo. Restart the backend to seed, or click &quot;Create user&quot; to add one.
+                      No users found. Adjust filters or seed dummy users.
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((u) => (
+                  sortedUsers.map((u) => (
                     <tr key={u.id}>
                       <td>
                         <code className="user-id-cell">{u.userid || u.external_id || `#${u.id}`}</code>

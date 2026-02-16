@@ -295,10 +295,12 @@ class TaskResponse(BaseModel):
     claimed_at: Optional[datetime] = None
     assigned_reviewer_id: Optional[int] = None
     due_at: Optional[datetime] = None
+    rework_count: Optional[int] = None
+    draft_response: Optional[dict] = None
     created_at: datetime
     updated_at: datetime
-    age_days: Optional[float] = None  # elapsed days since claimed_at or created_at
-    remaining_days: Optional[float] = None  # days left until due_at (negative if overdue)
+    age_days: Optional[float] = None
+    remaining_days: Optional[float] = None
 
     class Config:
         from_attributes = True

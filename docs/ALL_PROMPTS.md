@@ -1,6 +1,8 @@
 # All Prompts — Annotation Studio V1
 
-**Prioritised in case of conflict:** This prompt (Initial Prompt) takes precedence.
+**Prioritised in case of conflict:** Initial Prompt (below) takes precedence.
+
+**Reuse anytime:** See **`docs/REFINED_PROMPT.md`** for the single refined prompt that captures all requirements (image labelling use case, Ops/Admin collective tasks, Annotator request-to-claim, Reviewer slide view and rework, DB tab, dummy data, bulk export). Copy from there to restore or validate full scope.
 
 ---
 

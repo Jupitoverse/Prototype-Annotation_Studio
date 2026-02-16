@@ -200,13 +200,15 @@ class Task(Base):
     __tablename__ = "tasks"
     id = Column(Integer, primary_key=True, index=True)
     batch_id = Column(Integer, ForeignKey("batches.id"), nullable=False)
-    status = Column(String(50), nullable=False, default="pending")
+    status = Column(String(50), nullable=False, default="pending")  # pending | in_progress | completed | skipped
     pipeline_stage = Column(String(50), nullable=False, default="L1")
     content = Column(JSON, nullable=False)
     claimed_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     claimed_at = Column(DateTime, nullable=True)
     assigned_reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    due_at = Column(DateTime, nullable=True)  # last submission / ETA for this task
+    due_at = Column(DateTime, nullable=True)
+    rework_count = Column(Integer, default=0)  # times sent back by reviewer; efficiency = (total - rework) / total
+    draft_response = Column(JSON, default=None)  # auto-save partial annotation before submit
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     batch = relationship("Batch", back_populates="tasks")
@@ -239,3 +241,21 @@ class Annotation(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     task = relationship("Task", back_populates="annotations")
+
+
+class TaskClaimRequest(Base):
+    """Annotator requests to claim a task assigned to someone else. Approved by assignee OR ops/admin."""
+    __tablename__ = "task_claim_requests"
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    requested_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    current_assignee_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    status = Column(String(50), nullable=False, default="pending")  # pending | approved | rejected
+    approved_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    task = relationship("Task", backref="claim_requests")
+    requested_by = relationship("User", foreign_keys=[requested_by_id])
+    current_assignee = relationship("User", foreign_keys=[current_assignee_id])
+    approved_by = relationship("User", foreign_keys=[approved_by_id])

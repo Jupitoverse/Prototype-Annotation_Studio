@@ -8,9 +8,9 @@ from fastapi.responses import FileResponse
 from sqlalchemy import text
 
 from .database import engine, Base, SessionLocal
-from .models import User, Workspace, Project, Media, UserTagged, ActivitySpec, ActivityInstance, Batch, Task
+from .models import User, Workspace, Project, Media, UserTagged, ActivitySpec, ActivityInstance, Batch, Task, TaskClaimRequest
 from .auth import get_password_hash
-from .routers import auth_router, users_router, workspaces_router, projects_router, activity_router, batches_router, tasks_router, queue_router, insight_router
+from .routers import auth_router, users_router, workspaces_router, projects_router, activity_router, batches_router, tasks_router, queue_router, insight_router, db_router, requests_router
 
 
 def _migrate_users_table():
@@ -42,6 +42,8 @@ def _migrate_users_table():
             "ALTER TABLE projects ADD COLUMN annotator_eta_days VARCHAR(500)",
             "ALTER TABLE projects ADD COLUMN reviewer_eta_days VARCHAR(500)",
             "ALTER TABLE tasks ADD COLUMN due_at VARCHAR(50)",
+            "ALTER TABLE tasks ADD COLUMN rework_count INTEGER",
+            "ALTER TABLE tasks ADD COLUMN draft_response VARCHAR(2000)",
         ]:
             try:
                 conn.execute(text(sql))
@@ -49,6 +51,9 @@ def _migrate_users_table():
             except Exception:
                 conn.rollback()
                 pass
+    # Create task_claim_requests if missing
+    if "task_claim_requests" not in [t.name for t in Base.metadata.sorted_tables]:
+        Base.metadata.create_all(bind=engine, tables=[TaskClaimRequest.__table__])
 
 
 def _ensure_user(db, email, password, full_name, role, availability="100%", max_load=50):
@@ -181,13 +186,99 @@ def seed_db():
             db.commit()
             db.refresh(ws_kuru)
 
-        # Assign userids (u1, u2, ...) to all users so User Management and dropdowns show them
+        # Assign userids (u1, u2, ...) to all users
         _assign_userids(db)
         # Give annotators and reviewers access to Mumbai and Delhi workspaces
         for u in db.query(User).filter(User.role.in_(["annotator", "reviewer", "ops_manager", "admin", "super_admin"])).all():
             if not getattr(u, "workspace_ids", None) or u.workspace_ids == []:
                 u.workspace_ids = [ws_mumbai.id, ws_delhi.id]
         db.commit()
+
+        # Animals Demo workspace and Animals Prototype project (10 animal images for annotation demo)
+        from datetime import datetime as _dt
+        _now = _dt.utcnow()
+        _annotators = db.query(User).filter(User.role == "annotator").order_by(User.id).all()
+        _reviewers = db.query(User).filter(User.role == "reviewer").order_by(User.id).all()
+        ws_animals = db.query(Workspace).filter(Workspace.name == "Animals Demo").first()
+        if not ws_animals:
+            ws_animals = Workspace(
+                name="Animals Demo",
+                description="Demo workspace for animal image annotation and review workflow",
+                created_by_id=created_by_id,
+                total_projects=0,
+                status="active",
+                project_data=[],
+            )
+            db.add(ws_animals)
+            db.commit()
+            db.refresh(ws_animals)
+        proj_animals_proto = db.query(Project).filter(Project.external_id == "PRJ-ANIMALS-PROTO").first()
+        if not proj_animals_proto:
+            ann = _annotators[:2] if _annotators else []
+            rev = _reviewers[:1] if _reviewers else []
+            proj_animals_proto = Project(
+                workspace_id=ws_animals.id,
+                external_id="PRJ-ANIMALS-PROTO",
+                name="Animals Prototype",
+                description="Animal image annotation: label animal name and what the animal is doing. For annotator and reviewer workflow demo.",
+                profile_type="parent",
+                pipeline_stages=["L1", "Review", "Done"],
+                response_schema={
+                    "animal_name": "free_text",
+                    "what_animal_is_doing": "free_text",
+                },
+                status="active",
+                created_by_id=created_by_id or abhi.id,
+                num_annotators=len(ann),
+                num_reviewers=len(rev),
+                annotator_ids=[u.id for u in ann],
+                reviewer_ids=[u.id for u in rev],
+            )
+            db.add(proj_animals_proto)
+            db.commit()
+            db.refresh(proj_animals_proto)
+            for u in ann:
+                db.add(UserTagged(user_id=u.id, user_role=u.role, workspace_id=ws_animals.id, project_id=proj_animals_proto.id, startdate=_now, tagged_date=_now))
+            for u in rev:
+                db.add(UserTagged(user_id=u.id, user_role=u.role, workspace_id=ws_animals.id, project_id=proj_animals_proto.id, startdate=_now, tagged_date=_now))
+            batch_ap = Batch(project_id=proj_animals_proto.id, name="Animal images batch")
+            db.add(batch_ap)
+            db.commit()
+            db.refresh(batch_ap)
+            # 10 animal images from the web (picsum with seeds for variety; filenames match for export reference)
+            animal_contents = [
+                {"file": "animal_01.jpg", "url": "https://picsum.photos/seed/lion/600/400"},
+                {"file": "animal_02.jpg", "url": "https://picsum.photos/seed/elephant/600/400"},
+                {"file": "animal_03.jpg", "url": "https://picsum.photos/seed/tiger/600/400"},
+                {"file": "animal_04.jpg", "url": "https://picsum.photos/seed/dog/600/400"},
+                {"file": "animal_05.jpg", "url": "https://picsum.photos/seed/cat/600/400"},
+                {"file": "animal_06.jpg", "url": "https://picsum.photos/seed/bird/600/400"},
+                {"file": "animal_07.jpg", "url": "https://picsum.photos/seed/bear/600/400"},
+                {"file": "animal_08.jpg", "url": "https://picsum.photos/seed/deer/600/400"},
+                {"file": "animal_09.jpg", "url": "https://picsum.photos/seed/fox/600/400"},
+                {"file": "animal_10.jpg", "url": "https://picsum.photos/seed/wolf/600/400"},
+            ]
+            for c in animal_contents:
+                db.add(Task(batch_id=batch_ap.id, content=c, status="pending", pipeline_stage="L1"))
+            db.commit()
+            # Give super admin annotator/reviewer access to Animals Prototype for one-login demo
+            if abhi:
+                aid = abhi.id
+                annotator_ids = list(getattr(proj_animals_proto, "annotator_ids", None) or [])
+                reviewer_ids = list(getattr(proj_animals_proto, "reviewer_ids", None) or [])
+                if aid not in annotator_ids:
+                    annotator_ids.append(aid)
+                    proj_animals_proto.annotator_ids = annotator_ids
+                if aid not in reviewer_ids:
+                    reviewer_ids.append(aid)
+                    proj_animals_proto.reviewer_ids = reviewer_ids
+                proj_animals_proto.num_annotators = len(annotator_ids)
+                proj_animals_proto.num_reviewers = len(reviewer_ids)
+                if db.query(UserTagged).filter(UserTagged.user_id == aid, UserTagged.project_id == proj_animals_proto.id, UserTagged.user_role == "annotator").first() is None:
+                    db.add(UserTagged(user_id=aid, user_role="annotator", workspace_id=ws_animals.id, project_id=proj_animals_proto.id, startdate=_now, tagged_date=_now))
+                if db.query(UserTagged).filter(UserTagged.user_id == aid, UserTagged.project_id == proj_animals_proto.id, UserTagged.user_role == "reviewer").first() is None:
+                    db.add(UserTagged(user_id=aid, user_role="reviewer", workspace_id=ws_animals.id, project_id=proj_animals_proto.id, startdate=_now, tagged_date=_now))
+            db.commit()
 
         # Dummy project: Kurukshetra Annotation (PRJ-00001) with tasks and workflow
         proj_kuru = db.query(Project).filter(Project.external_id == "PRJ-00001").first()
@@ -320,6 +411,78 @@ def seed_db():
             for i in range(1, 4):
                 db.add(Task(batch_id=batch.id, content={"text": f"Sample item {i}: Please label this text."}))
             db.commit()
+
+        # Dummy Animal Image Annotation project: full workflow demo with "image" tasks
+        proj_animals = db.query(Project).filter(Project.external_id == "PRJ-ANIMALS").first()
+        if not proj_animals:
+            ann = annotators[:2] if annotators else []
+            rev = reviewers[:1] if reviewers else []
+            proj_animals = Project(
+                workspace_id=ws_default.id,
+                external_id="PRJ-ANIMALS",
+                name="Animal Image Labels (Demo)",
+                description="Dummy project with animal images for end-to-end annotation and review workflow",
+                profile_type="parent",
+                pipeline_stages=["L1", "Review", "Done"],
+                response_schema={"animal": "Dog, Cat, Bird, Other", "description": "free_text"},
+                status="active",
+                created_by_id=abhi.id,
+                num_annotators=len(ann),
+                num_reviewers=len(rev),
+                annotator_ids=[u.id for u in ann],
+                reviewer_ids=[u.id for u in rev],
+            )
+            db.add(proj_animals)
+            db.commit()
+            db.refresh(proj_animals)
+            for u in ann:
+                db.add(UserTagged(user_id=u.id, user_role=u.role, workspace_id=ws_default.id, project_id=proj_animals.id, startdate=now, tagged_date=now))
+            for u in rev:
+                db.add(UserTagged(user_id=u.id, user_role=u.role, workspace_id=ws_default.id, project_id=proj_animals.id, startdate=now, tagged_date=now))
+            batch_anim = Batch(project_id=proj_animals.id, name="Animal Batch 1")
+            db.add(batch_anim)
+            db.commit()
+            db.refresh(batch_anim)
+            animal_tasks = [
+                {"file": "dog1.jpg", "url": "https://placehold.co/400x300/eee/333?text=Dog"},
+                {"file": "cat1.jpg", "url": "https://placehold.co/400x300/eee/333?text=Cat"},
+                {"file": "bird1.jpg", "url": "https://placehold.co/400x300/eee/333?text=Bird"},
+                {"file": "dog2.jpg", "url": "https://placehold.co/400x300/eee/333?text=Dog2"},
+                {"file": "cat2.jpg", "url": "https://placehold.co/400x300/eee/333?text=Cat2"},
+            ]
+            for i, c in enumerate(animal_tasks):
+                t = Task(batch_id=batch_anim.id, content=c, status="pending" if i > 2 else ("completed" if i == 0 else "in_progress"), pipeline_stage="Done" if i == 0 else ("Review" if i == 1 else "L1"))
+                db.add(t)
+                if i == 0 and ann:
+                    t.claimed_by_id = ann[0].id
+                    t.claimed_at = now
+                elif i == 1 and ann:
+                    t.claimed_by_id = ann[0].id
+                    t.claimed_at = now
+                    if rev:
+                        t.assigned_reviewer_id = rev[0].id
+            db.commit()
+
+        # Ensure Super Admin (abhi) can act as annotator and reviewer for one-login demo
+        for proj in [db.query(Project).filter(Project.external_id == "PRJ-ANIMALS").first(), db.query(Project).filter(Project.external_id == "PRJ-00001").first()]:
+            if not proj or not abhi:
+                continue
+            aid = abhi.id
+            annotator_ids = list(getattr(proj, "annotator_ids", None) or [])
+            reviewer_ids = list(getattr(proj, "reviewer_ids", None) or [])
+            if aid not in annotator_ids:
+                annotator_ids.append(aid)
+                proj.annotator_ids = annotator_ids
+            if aid not in reviewer_ids:
+                reviewer_ids.append(aid)
+                proj.reviewer_ids = reviewer_ids
+            proj.num_annotators = len(annotator_ids)
+            proj.num_reviewers = len(reviewer_ids)
+            if db.query(UserTagged).filter(UserTagged.user_id == aid, UserTagged.project_id == proj.id, UserTagged.user_role == "annotator").first() is None:
+                db.add(UserTagged(user_id=aid, user_role="annotator", workspace_id=proj.workspace_id, project_id=proj.id, startdate=now, tagged_date=now))
+            if db.query(UserTagged).filter(UserTagged.user_id == aid, UserTagged.project_id == proj.id, UserTagged.user_role == "reviewer").first() is None:
+                db.add(UserTagged(user_id=aid, user_role="reviewer", workspace_id=proj.workspace_id, project_id=proj.id, startdate=now, tagged_date=now))
+        db.commit()
     finally:
         db.close()
 
@@ -356,6 +519,8 @@ app.include_router(batches_router.router)
 app.include_router(tasks_router.router)
 app.include_router(queue_router.router)
 app.include_router(insight_router.router)
+app.include_router(db_router.router)
+app.include_router(requests_router.router)
 
 frontend_path = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 

@@ -16,6 +16,8 @@ import { Placeholder } from './components/Placeholder'
 import { UserManagement } from './components/UserManagement'
 import { Workspaces } from './components/Workspaces'
 import { Assignment } from './components/Assignment'
+import { DB } from './components/DB'
+import { Requests } from './components/Requests'
 import { api, setToken, getToken, logout as apiLogout } from './api'
 
 function App() {
@@ -69,6 +71,7 @@ function App() {
         <Route path="/projects/:id" element={<ProjectDetail />} />
         <Route path="/projects/:id/flow" element={<FlowCanvas />} />
         <Route path="/workqueue" element={<Workqueue user={user} canAnnotator={canAnnotator} canReviewer={canReviewer} />} />
+        <Route path="/review" element={<Workqueue user={user} canAnnotator={canAnnotator} canReviewer={canReviewer} initialView="reviewer" />} />
         <Route path="/tasks" element={<TaskList />} />
         <Route path="/tasks/annotator" element={<TasksByRole role="annotator" title="Tasks by Annotator" emptyMessage="No tasks assigned to annotators yet. Assign tasks from a project." />} />
         <Route path="/tasks/reviewer" element={<TasksByRole role="reviewer" title="Tasks by Reviewer" emptyMessage="No tasks assigned to reviewers yet. Assign reviewers from a project." />} />
@@ -79,11 +82,10 @@ function App() {
         <Route path="/reassign" element={<Placeholder title="Re-assign" description="Re-assign tasks to annotators or reviewers." />} />
         <Route path="/requests/clarification" element={<Placeholder title="Request Raised for Clarification" description="Requests from annotators for clarification (Ops/Admin)." />} />
         <Route path="/requests/reassign" element={<Placeholder title="Request Raised for Re-Assignment" description="Requests for re-assignment; Operation Manager approval." />} />
-        <Route path="/export" element={<Export />} />
+        <Route path="/export" element={canOps ? <Export /> : <Placeholder title="Access restricted" description="Export is available to Super Admin, Admin, and Operation Manager." />} />
         <Route path="/insight" element={<Insight />} />
-        <Route path="/previous-work" element={<Placeholder title="Previous Work" description="Feedback, Insight, Rework — tasks with reviewer feedback or open for rework." />} />
-        <Route path="/reviewer-response" element={<Placeholder title="Response from Reviewer" description="View reviewer/QA feedback and respond here." />} />
-        <Route path="/profile" element={<Placeholder title="Profile" description="Edit your profile (basic details). Annotators and reviewers can update name and company." />} />
+        <Route path="/db" element={canOps ? <DB /> : <Placeholder title="Access restricted" description="DB tab is for Super Admin, Admin, or Ops Manager." />} />
+        <Route path="/requests" element={<Requests user={user} canOps={canOps} canAnnotator={canAnnotator} />} />
       </Routes>
     </Layout>
   )

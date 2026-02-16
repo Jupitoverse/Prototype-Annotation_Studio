@@ -6,21 +6,26 @@ export function Workspaces() {
   const [workspaces, setWorkspaces] = useState([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({ status: '', name_contains: '' })
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [createName, setCreateName] = useState('')
+  const [createDescription, setCreateDescription] = useState('')
+  const [createSubmitting, setCreateSubmitting] = useState(false)
+  const [createError, setCreateError] = useState('')
   const navigate = useNavigate()
+
+  const loadWorkspaces = () => {
+    api('/workspaces')
+      .then((list) => setWorkspaces(Array.isArray(list) ? list : []))
+      .catch(() => setWorkspaces([]))
+  }
 
   useEffect(() => {
     let cancelled = false
-    async function load() {
-      try {
-        const list = await api('/workspaces')
-        if (!cancelled) setWorkspaces(Array.isArray(list) ? list : [])
-      } catch {
-        if (!cancelled) setWorkspaces([])
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    load()
+    setLoading(true)
+    api('/workspaces')
+      .then((list) => { if (!cancelled) setWorkspaces(Array.isArray(list) ? list : []) })
+      .catch(() => { if (!cancelled) setWorkspaces([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [])
 
@@ -34,6 +39,19 @@ export function Workspaces() {
     }
     return true
   })
+
+  const downloadCsv = () => {
+    const headers = ['ID', 'Name', 'Description', 'Status']
+    const rows = filtered.map((w) => [w.id, w.name ?? '', w.description ?? '', w.status ?? ''])
+    const csv = [headers.join(','), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `workspaces-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <div className="list-page">
@@ -66,10 +84,79 @@ export function Workspaces() {
         </div>
       </aside>
       <div className="list-content">
-        <div className="list-header">
-          <h1 className="list-title">Workspaces</h1>
-          <span className="list-results">{filtered.length} workspace{filtered.length !== 1 ? 's' : ''}</span>
+        <div className="list-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <h1 className="list-title">Workspaces</h1>
+            <span className="list-results">{filtered.length} workspace{filtered.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={downloadCsv} disabled={filtered.length === 0}>Download CSV</button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setShowCreateForm(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+              title="Create new workspace"
+            >
+              <span aria-hidden style={{ fontSize: '1.25rem', lineHeight: 1 }}>+</span>
+              New workspace
+            </button>
+          </div>
         </div>
+
+        {showCreateForm && (
+          <div className="card" style={{ marginBottom: '1.25rem', padding: '1.25rem', border: '1px solid var(--border)', borderRadius: 8 }}>
+            <h3 style={{ marginTop: 0, marginBottom: '0.75rem' }}>Create workspace</h3>
+            {createError && <p className="meta" style={{ color: 'var(--danger)', marginBottom: '0.5rem' }}>{createError}</p>}
+            <label className="form-label">Name</label>
+            <input
+              className="form-input"
+              value={createName}
+              onChange={(e) => { setCreateName(e.target.value); setCreateError('') }}
+              placeholder="Workspace name"
+              style={{ marginBottom: '0.75rem' }}
+            />
+            <label className="form-label">Description</label>
+            <textarea
+              className="form-input"
+              value={createDescription}
+              onChange={(e) => setCreateDescription(e.target.value)}
+              placeholder="Short description (optional)"
+              rows={2}
+              style={{ marginBottom: '1rem' }}
+            />
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={!createName.trim() || createSubmitting}
+                onClick={async () => {
+                  setCreateError('')
+                  setCreateSubmitting(true)
+                  try {
+                    await api('/workspaces', {
+                      method: 'POST',
+                      body: JSON.stringify({ name: createName.trim(), description: createDescription.trim() || '' }),
+                    })
+                    setShowCreateForm(false)
+                    setCreateName('')
+                    setCreateDescription('')
+                    loadWorkspaces()
+                  } catch (e) {
+                    setCreateError(e?.message || 'Failed to create workspace')
+                  } finally {
+                    setCreateSubmitting(false)
+                  }
+                }}
+              >
+                {createSubmitting ? 'Creating…' : 'Create'}
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => { setShowCreateForm(false); setCreateError(''); setCreateName(''); setCreateDescription('') }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
         {loading ? (
           <div className="loader">
             <div className="spinner" />

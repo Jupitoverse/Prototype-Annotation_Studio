@@ -95,6 +95,7 @@ Legacy: admin@annotationstudio.com / admin123, ops@annotationstudio.com / demo, 
 - **Business implementation:** [docs/BUSINESS_IMPLEMENTATION.md](docs/BUSINESS_IMPLEMENTATION.md)
 - **Architecture:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - **All prompts (prioritised):** [docs/ALL_PROMPTS.md](docs/ALL_PROMPTS.md)
+- **Refined prompt (reuse anytime):** [docs/REFINED_PROMPT.md](docs/REFINED_PROMPT.md) — single consolidated prompt for full scope (image labelling, Ops/Admin tasks, Annotator request-to-claim, Reviewer rework, DB tab, export, dummy data).
 
 New Proposal PPT and Architecture/UI PPT can be derived from this implementation and the PRD docs under `Data Annotation\PRD Docs`.
 

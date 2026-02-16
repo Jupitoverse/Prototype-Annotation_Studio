@@ -458,7 +458,9 @@ export function NewProject() {
                   </svg>
                 </div>
                 <p className="dropzone-title">Drop files here or click to browse</p>
-                <p className="dropzone-hint">Large media up to 500 MB supported. All formats: images (jpg, png, gif, webp, bmp, svg), video (mp4, webm, mov, avi), audio (mp3, wav, m4a), documents, text, XML, JSON.</p>
+                <p className="dropzone-hint">
+                  Accepts multiple data formats. Images: JPG, PNG, GIF, WebP, BMP, SVG, TIFF. Video: MP4, WebM, MOV, AVI, MKV. Audio: MP3, WAV, OGG, M4A, AAC. Documents &amp; data: TXT, CSV, JSON, XML, HTML, PDF. Paste text below for line-by-line items. Large files up to 500 MB supported.
+                </p>
                 {metricsLoading && (
                   <>
                     <p className="dropzone-loading">Reading file metrics (large files may take a moment)…</p>

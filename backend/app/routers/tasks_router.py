@@ -25,6 +25,8 @@ def _task_to_response(task: models.Task) -> schemas.TaskResponse:
         claimed_at=task.claimed_at,
         assigned_reviewer_id=task.assigned_reviewer_id,
         due_at=due,
+        rework_count=getattr(task, "rework_count", None) or 0,
+        draft_response=getattr(task, "draft_response", None),
         created_at=task.created_at,
         updated_at=task.updated_at,
         age_days=age_days,
@@ -36,18 +38,25 @@ def _task_to_response(task: models.Task) -> schemas.TaskResponse:
 def list_tasks(
     batch_id: int | None = Query(None),
     project_id: int | None = Query(None),
+    workspace_id: int | None = Query(None),
     status: str | None = Query(None),
     pipeline_stage: str | None = Query(None),
     claimed_by_id: int | None = Query(None, description="Filter by annotator (claimed by user id)"),
     assigned_reviewer_id: int | None = Query(None, description="Filter by reviewer (assigned reviewer id)"),
+    date_from: str | None = Query(None, description="Filter tasks updated on or after (YYYY-MM-DD)"),
+    date_to: str | None = Query(None, description="Filter tasks updated on or before (YYYY-MM-DD)"),
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
     q = db.query(models.Task)
     if batch_id is not None:
         q = q.filter(models.Task.batch_id == batch_id)
+    if project_id is not None or workspace_id is not None:
+        q = q.join(models.Batch)
     if project_id is not None:
-        q = q.join(models.Batch).filter(models.Batch.project_id == project_id)
+        q = q.filter(models.Batch.project_id == project_id)
+    if workspace_id is not None:
+        q = q.join(models.Project, models.Batch.project_id == models.Project.id).filter(models.Project.workspace_id == workspace_id)
     if status:
         q = q.filter(models.Task.status == status)
     if pipeline_stage:
@@ -56,6 +65,18 @@ def list_tasks(
         q = q.filter(models.Task.claimed_by_id == claimed_by_id)
     if assigned_reviewer_id is not None:
         q = q.filter(models.Task.assigned_reviewer_id == assigned_reviewer_id)
+    if date_from:
+        try:
+            from datetime import datetime as dt
+            q = q.filter(models.Task.updated_at >= dt.strptime(date_from, "%Y-%m-%d"))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            from datetime import datetime as dt
+            q = q.filter(models.Task.updated_at < dt.strptime(date_to, "%Y-%m-%d") + dt.timedelta(days=1))
+        except ValueError:
+            pass
     tasks = q.order_by(models.Task.created_at.desc()).all()
     return [_task_to_response(t) for t in tasks]
 

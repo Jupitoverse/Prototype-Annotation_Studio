@@ -70,6 +70,19 @@ export function Projects() {
 
   const userDisplay = (u) => (u.full_name || [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email || '').trim() || u.email
 
+  const downloadCsv = () => {
+    const headers = ['ID', 'Name', 'External ID', 'Status', 'Profile type', 'Updated']
+    const rows = displayedProjects.map((p) => [p.id, p.name ?? '', p.external_id ?? '', p.status ?? '', p.profile_type ?? '', p.updated_at ? new Date(p.updated_at).toLocaleDateString() : ''])
+    const csv = [headers.join(','), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `projects-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <>
       <div className="list-page">
@@ -154,9 +167,24 @@ export function Projects() {
         </aside>
 
         <div className="list-content">
-          <div className="list-header">
-            <h1 className="list-title">Project list</h1>
-            <span className="list-results">{displayedProjects.length} result{displayedProjects.length !== 1 ? 's' : ''}</span>
+          <div className="list-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <h1 className="list-title">Projects</h1>
+              <span className="list-results">{displayedProjects.length} result{displayedProjects.length !== 1 ? 's' : ''}</span>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={downloadCsv} disabled={displayedProjects.length === 0}>Download CSV</button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => navigate('/projects/new')}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                title="Create new project"
+              >
+                <span aria-hidden style={{ fontSize: '1.25rem', lineHeight: 1 }}>+</span>
+                New project
+              </button>
+            </div>
           </div>
 
           {loading ? (

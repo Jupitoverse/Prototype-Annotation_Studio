@@ -1,3 +1,5 @@
+const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) || ''
+
 function getToken() {
   return localStorage.getItem('token')
 }
@@ -19,7 +21,8 @@ function headers() {
 }
 
 export async function api(path, options = {}) {
-  const res = await fetch(path, {
+  const url = path.startsWith('http') ? path : `${API_BASE}${path}`
+  const res = await fetch(url, {
     ...options,
     headers: { ...headers(), ...options.headers },
   })

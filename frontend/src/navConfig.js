@@ -1,34 +1,34 @@
 /**
  * Role-based navigation. Each item is shown only to the listed roles.
- * Roles: super_admin, admin, ops_manager, annotator, reviewer, guest
+ * First occurrence of each path wins. Use "Review Task" for the review workqueue.
  */
 export const NAV_ITEMS = [
   // ----- All roles -----
   { path: '/', label: 'Home', roles: ['super_admin', 'admin', 'ops_manager', 'annotator', 'reviewer', 'guest'] },
 
-  // ----- Super Admin, Admin, Ops Manager (essential tabs only) -----
+  // ----- Ops + Reviewer: Review Task (must appear before other /review so reviewer sees it) -----
+  { path: '/review', label: 'Review Task', roles: ['reviewer', 'super_admin', 'admin', 'ops_manager'] },
+
+  // ----- Super Admin, Admin, Ops Manager -----
   { path: '/users', label: 'User Management', roles: ['super_admin', 'admin', 'ops_manager'] },
   { path: '/workspaces', label: 'Workspaces', roles: ['super_admin', 'admin', 'ops_manager'] },
   { path: '/projects', label: 'Projects', roles: ['super_admin', 'admin', 'ops_manager'] },
-  { path: '/projects/new', label: 'Create', roles: ['super_admin', 'admin', 'ops_manager'] },
   { path: '/tasks', label: 'Tasks', roles: ['super_admin', 'admin', 'ops_manager'] },
   { path: '/tasks/annotator', label: 'Annotator tasks', roles: ['super_admin', 'admin', 'ops_manager'] },
   { path: '/tasks/reviewer', label: 'Reviewer tasks', roles: ['super_admin', 'admin', 'ops_manager'] },
   { path: '/insight', label: 'Insight', roles: ['super_admin', 'admin', 'ops_manager'] },
   { path: '/export', label: 'Export', roles: ['super_admin', 'admin', 'ops_manager'] },
+  { path: '/db', label: 'DB', roles: ['super_admin', 'admin', 'ops_manager'] },
+  { path: '/requests', label: 'Requests', roles: ['super_admin', 'admin', 'ops_manager', 'annotator'] },
 
   // ----- Annotator -----
-  { path: '/profile', label: 'Profile', roles: ['annotator'] },
   { path: '/assignment', label: 'Assignment', roles: ['annotator'] },
   { path: '/workqueue', label: 'Annotation Task', roles: ['annotator'] },
-  { path: '/previous-work', label: 'Previous Work', roles: ['annotator'], sub: 'Feedback · Insight · Rework' },
-  { path: '/reviewer-response', label: 'Response from Reviewer', roles: ['annotator'] },
 
-  // ----- Reviewer -----
+  // ----- Reviewer (additional; Review Task already above) -----
   { path: '/assignment', label: 'Assignment', roles: ['reviewer'] },
-  { path: '/workqueue', label: 'Review', roles: ['reviewer'] },
+  { path: '/workqueue', label: 'Workqueue', roles: ['reviewer'] },
   { path: '/insight', label: 'Insight', roles: ['reviewer'] },
-  { path: '/profile', label: 'Profile', roles: ['reviewer'] },
 
   // ----- Guest (read-only) -----
   { path: '/projects', label: 'Projects', roles: ['guest'] },
