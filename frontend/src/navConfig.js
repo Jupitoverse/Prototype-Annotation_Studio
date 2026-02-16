@@ -1,42 +1,26 @@
 /**
- * Role-based navigation. Each item is shown only to the listed roles.
- * First occurrence of each path wins. Use "Review Task" for the review workqueue.
+ * Tab order (first occurrence of each path wins):
+ * Home, Workspace, Project, User Management, Task, Annotator Task, Annotation Task,
+ * Reviewer Task, Review Task, Export, Insight, Assignment, DB
  */
 export const NAV_ITEMS = [
-  // ----- All roles -----
   { path: '/', label: 'Home', roles: ['super_admin', 'admin', 'ops_manager', 'annotator', 'reviewer', 'guest'] },
-
-  // ----- Ops + Reviewer: Review Task (must appear before other /review so reviewer sees it) -----
-  { path: '/review', label: 'Review Task', roles: ['reviewer', 'super_admin', 'admin', 'ops_manager'] },
-
-  // ----- Super Admin, Admin, Ops Manager -----
+  { path: '/workspaces', label: 'Workspace', roles: ['super_admin', 'admin', 'ops_manager'] },
+  { path: '/projects', label: 'Project', roles: ['super_admin', 'admin', 'ops_manager', 'guest'] },
   { path: '/users', label: 'User Management', roles: ['super_admin', 'admin', 'ops_manager'] },
-  { path: '/workspaces', label: 'Workspaces', roles: ['super_admin', 'admin', 'ops_manager'] },
-  { path: '/projects', label: 'Projects', roles: ['super_admin', 'admin', 'ops_manager'] },
-  { path: '/tasks', label: 'Tasks', roles: ['super_admin', 'admin', 'ops_manager'] },
-  { path: '/tasks/annotator', label: 'Annotator tasks', roles: ['super_admin', 'admin', 'ops_manager'] },
-  { path: '/tasks/reviewer', label: 'Reviewer tasks', roles: ['super_admin', 'admin', 'ops_manager'] },
-  { path: '/insight', label: 'Insight', roles: ['super_admin', 'admin', 'ops_manager'] },
+  { path: '/tasks', label: 'Task', roles: ['super_admin', 'admin', 'ops_manager', 'guest'] },
+  { path: '/tasks/annotator', label: 'Annotator Task', roles: ['super_admin', 'admin', 'ops_manager'] },
+  { path: '/workqueue', label: 'Annotation Task', roles: ['annotator', 'super_admin', 'admin', 'ops_manager', 'reviewer'] },
+  { path: '/tasks/reviewer', label: 'Reviewer Task', roles: ['super_admin', 'admin', 'ops_manager'] },
+  { path: '/review', label: 'Review Task', roles: ['reviewer', 'super_admin', 'admin', 'ops_manager'] },
   { path: '/export', label: 'Export', roles: ['super_admin', 'admin', 'ops_manager'] },
+  { path: '/insight', label: 'Insight', roles: ['super_admin', 'admin', 'ops_manager', 'reviewer', 'guest'] },
+  { path: '/assignment', label: 'Assignment', roles: ['annotator', 'reviewer'] },
   { path: '/db', label: 'DB', roles: ['super_admin', 'admin', 'ops_manager'] },
   { path: '/requests', label: 'Requests', roles: ['super_admin', 'admin', 'ops_manager', 'annotator'] },
-
-  // ----- Annotator -----
-  { path: '/assignment', label: 'Assignment', roles: ['annotator'] },
-  { path: '/workqueue', label: 'Annotation Task', roles: ['annotator'] },
-
-  // ----- Reviewer (additional; Review Task already above) -----
-  { path: '/assignment', label: 'Assignment', roles: ['reviewer'] },
-  { path: '/workqueue', label: 'Workqueue', roles: ['reviewer'] },
-  { path: '/insight', label: 'Insight', roles: ['reviewer'] },
-
-  // ----- Guest (read-only) -----
-  { path: '/projects', label: 'Projects', roles: ['guest'] },
-  { path: '/tasks', label: 'Tasks', roles: ['guest'] },
-  { path: '/insight', label: 'Insight', roles: ['guest'] },
 ]
 
-/** Get unique nav entries for role(s). Pass array to show Annotator+Reviewer tabs to Ops. First occurrence of each path wins. */
+/** Get unique nav entries for role(s). First occurrence of each path wins. */
 export function getNavForRole(roleOrRoles) {
   const roles = Array.isArray(roleOrRoles) ? roleOrRoles : (roleOrRoles ? [roleOrRoles] : [])
   if (!roles.length) return []
